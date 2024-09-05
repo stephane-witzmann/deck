@@ -29,9 +29,7 @@ impl<T: Copy> Deck<T> {
             return None;
         }
 
-        let value = self.draw_pile[0];
-        self.draw_pile.remove(0);
-        Some(value)
+        Some(self.draw_pile.remove(0))
     }
 
     pub fn put_top(&mut self, x: T) {
@@ -40,19 +38,22 @@ impl<T: Copy> Deck<T> {
 
     pub fn put_bottom(&mut self, x: T) { self.draw_pile.insert(0, x); }
 
-    pub fn put_sparse(&mut self, x: T, buckets: usize) {
-        if buckets == 0 {
+    // TODO make x a vector => remove "buckets" + remove the need for Copy
+    pub fn put_sparse(&mut self, x: T, n_buckets: usize) {
+        if n_buckets == 0 {
             return;
         }
 
-        let slice = self.draw_pile.as_slice();
-        let elements = split(slice, buckets);
+        let bucket_standard_size = self.draw_pile.len() / n_buckets;
+        let mut carry = self.draw_pile.len() % n_buckets;
 
-        self.draw_pile.clear();
-        for ref mut bucket in elements {
-            let index = thread_rng().gen_range(0..=bucket.len());
-            bucket.insert(index, x);
-            self.draw_pile.append(bucket);
+        let mut start = 0_usize;
+        for _ in 0..n_buckets {
+            let size = bucket_standard_size + if carry > 0 { carry -= 1; 1 } else { 0 };
+            let index = thread_rng().gen_range(0..=size);
+            self.draw_pile.insert(start + index, x);
+
+            start += size + 1;
         }
     }
 
@@ -81,25 +82,6 @@ impl<T: Copy> Deck<T> {
     pub fn shuffle_draw(&mut self) { self.draw_pile.as_mut_slice().shuffle(&mut thread_rng()); }
 
     pub fn shuffle_discard(&mut self) { self.discard_pile.as_mut_slice().shuffle(&mut thread_rng()); }
-}
-
-fn split<T: Copy>(source: &[T], n: usize) -> Vec<Vec<T>> {
-    let mut elements = Vec::<&[T]>::new();
-
-    let bucket_standard_size = source.len() / n;
-    let mut carry = source.len() % n;
-
-    let mut remaining = source;
-    while !remaining.is_empty() {
-        let size = bucket_standard_size + if carry > 0 { carry -= 1; 1 } else { 0 };
-
-        let (head, tail) = remaining.split_at(size);
-        elements.push(head);
-
-        remaining = tail;
-    }
-
-    elements.iter().map(|slice| Vec::from(*slice)).collect()
 }
 
 #[cfg(test)]
@@ -241,28 +223,27 @@ mod tests {
 
         assert_eq!(deck.draw_pile.len(), initial_deck_size + n_insert);
 
-        let elements = split(deck.draw_pile.as_slice(), n_insert);
-
         let bucket_standard_size = initial_deck_size / n_insert + 1;
         let mut carry = initial_deck_size % n_insert;
-
         let mut start_counter: usize = 0;
-        for ref mut element in elements {
-            let expected_size = bucket_standard_size + if carry > 0 {
-                carry -= 1;
-                1
-            } else { 0 };
-            assert_eq!(element.len(), expected_size as usize);
+        let mut remaining = deck.draw_pile.as_slice();
 
-            assert!(element.contains(&initial_deck_size));
-            element.retain(|x| *x != initial_deck_size);
-            assert_eq!(element.len(), expected_size as usize - 1);
+        while !remaining.is_empty() {
+            let size = bucket_standard_size + if carry > 0 { carry -= 1; 1 } else { 0 };
 
-            for i in 0..element.len() {
-                assert_eq!(element[i], start_counter + i);
+            let (bucket, tail) = remaining.split_at(size);
+
+            // check bucket
+            assert_eq!(bucket.len(), size);
+            assert!(bucket.contains(&initial_deck_size));
+
+            for (i, e) in bucket.iter().filter(|x| **x != initial_deck_size).enumerate() {
+                assert_eq!(*e, start_counter + i);
             }
 
-            start_counter += expected_size - 1;
+            // loop
+            remaining = tail;
+            start_counter += size - 1;
         }
     }
 }
