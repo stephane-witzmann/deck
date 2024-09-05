@@ -84,22 +84,22 @@ impl<T: Copy> Deck<T> {
 }
 
 fn split<T: Copy>(source: &[T], n: usize) -> Vec<Vec<T>> {
-    let mut elements = Vec::<Vec<T>>::new();
+    let mut elements = Vec::<&[T]>::new();
+
     let bucket_standard_size = source.len() / n;
     let mut carry = source.len() % n;
 
-    let mut start = 0_usize;
-    while start < source.len() {
-        let mut new_element = Vec::<T>::new();
+    let mut remaining = source;
+    while !remaining.is_empty() {
         let size = bucket_standard_size + if carry > 0 { carry -= 1; 1 } else { 0 };
-        for i in 0..size {
-            new_element.push(source[start + i]);
-        }
-        start += size;
-        elements.push(new_element);
+
+        let (head, tail) = remaining.split_at(size);
+        elements.push(head);
+
+        remaining = tail;
     }
 
-    elements
+    elements.iter().map(|slice| Vec::from(*slice)).collect()
 }
 
 #[cfg(test)]
