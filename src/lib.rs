@@ -44,7 +44,7 @@ impl<T: Copy> Deck<T> {
 
         self.draw_pile.make_contiguous();
         let slice = self.draw_pile.as_slices().0;
-        let elements = split(slice, buckets as usize);
+        let elements = split(slice, buckets);
 
         self.draw_pile.clear();
         for ref mut bucket in elements {
@@ -64,6 +64,11 @@ impl<T: Copy> Deck<T> {
 
     pub fn remaining(&self) -> usize {
         self.draw_pile.len()
+    }
+
+    pub fn see_draw(&mut self) -> &[T] {
+        self.draw_pile.make_contiguous();
+        self.draw_pile.as_slices().0
     }
 
     pub fn see_discarded(&self) -> &[T] {
