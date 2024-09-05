@@ -1,9 +1,8 @@
-use std::collections::VecDeque;
 use rand::{Rng, thread_rng};
 use rand::seq::SliceRandom;
 
 pub struct Deck<T> {
-    draw_pile: VecDeque<T>,
+    draw_pile: Vec<T>,
     discard_pile: Vec<T>,
     removed_pile: Vec<T>
 }
@@ -11,7 +10,7 @@ pub struct Deck<T> {
 impl<T: Copy> Deck<T> {
     pub fn new() -> Self {
         Self {
-            draw_pile: VecDeque::<T>::new(),
+            draw_pile: Vec::<T>::new(),
             discard_pile: Vec::<T>::new(),
             removed_pile: Vec::<T>::new(),
         }
@@ -22,28 +21,31 @@ impl<T: Copy> Deck<T> {
     }
 
     pub fn draw_top(&mut self) -> Option<T> {
-        self.draw_pile.pop_back()
+        self.draw_pile.pop()
     }
 
     pub fn draw_bottom(&mut self) -> Option<T> {
-        self.draw_pile.pop_front()
+        if self.draw_pile.is_empty() {
+            return None;
+        }
+
+        let value = self.draw_pile[0];
+        self.draw_pile.remove(0);
+        Some(value)
     }
 
     pub fn put_top(&mut self, x: T) {
-        self.draw_pile.push_back(x);
+        self.draw_pile.push(x);
     }
 
-    pub fn put_bottom(&mut self, x: T) {
-        self.draw_pile.push_front(x);
-    }
+    pub fn put_bottom(&mut self, x: T) { self.draw_pile.insert(0, x); }
 
     pub fn put_sparse(&mut self, x: T, buckets: usize) {
         if buckets == 0 {
             return;
         }
 
-        self.draw_pile.make_contiguous();
-        let slice = self.draw_pile.as_slices().0;
+        let slice = self.draw_pile.as_slice();
         let elements = split(slice, buckets);
 
         self.draw_pile.clear();
@@ -66,10 +68,7 @@ impl<T: Copy> Deck<T> {
         self.draw_pile.len()
     }
 
-    pub fn see_draw(&mut self) -> &[T] {
-        self.draw_pile.make_contiguous();
-        self.draw_pile.as_slices().0
-    }
+    pub fn see_draw(&mut self) -> &[T] { self.draw_pile.as_slice() }
 
     pub fn see_discarded(&self) -> &[T] {
         self.discard_pile.as_slice()
@@ -79,27 +78,22 @@ impl<T: Copy> Deck<T> {
         self.removed_pile.as_slice()
     }
 
-    pub fn shuffle_draw(&mut self) {
-        self.draw_pile.make_contiguous();
-        self.draw_pile.as_mut_slices().0.shuffle(&mut thread_rng());
-    }
+    pub fn shuffle_draw(&mut self) { self.draw_pile.as_mut_slice().shuffle(&mut thread_rng()); }
 
-    pub fn shuffle_discard(&mut self) {
-        self.discard_pile.as_mut_slice().shuffle(&mut thread_rng());
-    }
+    pub fn shuffle_discard(&mut self) { self.discard_pile.as_mut_slice().shuffle(&mut thread_rng()); }
 }
 
-fn split<T: Copy>(source: &[T], n: usize) -> Vec<VecDeque<T>> {
-    let mut elements = Vec::<VecDeque<T>>::new();
+fn split<T: Copy>(source: &[T], n: usize) -> Vec<Vec<T>> {
+    let mut elements = Vec::<Vec<T>>::new();
     let bucket_standard_size = source.len() / n;
     let mut carry = source.len() % n;
 
     let mut start = 0_usize;
     while start < source.len() {
-        let mut new_element = VecDeque::<T>::new();
+        let mut new_element = Vec::<T>::new();
         let size = bucket_standard_size + if carry > 0 { carry -= 1; 1 } else { 0 };
         for i in 0..size {
-            new_element.push_back(source[start + i]);
+            new_element.push(source[start + i]);
         }
         start += size;
         elements.push(new_element);
@@ -160,7 +154,7 @@ mod tests {
 
         for _ in 0..10000 { // just try long enough
             deck.shuffle_draw();
-            if deck.draw_pile.back() == Some(&1) {
+            if deck.draw_pile.last() == Some(&1) {
                 break;
             }
         }
@@ -168,7 +162,7 @@ mod tests {
 
         for _ in 0..10000 { // again
             deck.shuffle_draw();
-            if deck.draw_pile.back() == Some(&2) {
+            if deck.draw_pile.last() == Some(&2) {
                 break;
             }
         }
@@ -247,8 +241,7 @@ mod tests {
 
         assert_eq!(deck.draw_pile.len(), initial_deck_size + n_insert);
 
-        deck.draw_pile.make_contiguous();
-        let elements = split(deck.draw_pile.as_slices().0, n_insert as usize);
+        let elements = split(deck.draw_pile.as_slice(), n_insert);
 
         let bucket_standard_size = initial_deck_size / n_insert + 1;
         let mut carry = initial_deck_size % n_insert;
