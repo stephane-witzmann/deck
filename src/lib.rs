@@ -1,10 +1,10 @@
-use rand::{Rng, thread_rng};
 use rand::seq::SliceRandom;
+use rand::{thread_rng, Rng};
 
 pub struct Deck<T> {
     draw_pile: Vec<T>,
     discard_pile: Vec<T>,
-    removed_pile: Vec<T>
+    removed_pile: Vec<T>,
 }
 
 impl<T> Deck<T> {
@@ -36,7 +36,9 @@ impl<T> Deck<T> {
         self.draw_pile.push(x);
     }
 
-    pub fn put_bottom(&mut self, x: T) { self.draw_pile.insert(0, x); }
+    pub fn put_bottom(&mut self, x: T) {
+        self.draw_pile.insert(0, x);
+    }
 
     pub fn put_sparse(&mut self, elements: Vec<T>) {
         if elements.is_empty() {
@@ -49,7 +51,13 @@ impl<T> Deck<T> {
 
         let mut start = 0_usize;
         for x in elements {
-            let size = bucket_standard_size + if carry > 0 { carry -= 1; 1 } else { 0 };
+            let size = bucket_standard_size
+                + if carry > 0 {
+                    carry -= 1;
+                    1
+                } else {
+                    0
+                };
             let index = thread_rng().gen_range(0..=size);
             self.draw_pile.insert(start + index, x);
 
@@ -69,7 +77,9 @@ impl<T> Deck<T> {
         self.draw_pile.len()
     }
 
-    pub fn see_draw(&mut self) -> &[T] { self.draw_pile.as_slice() }
+    pub fn see_draw(&mut self) -> &[T] {
+        self.draw_pile.as_slice()
+    }
 
     pub fn see_discarded(&self) -> &[T] {
         self.discard_pile.as_slice()
@@ -79,9 +89,13 @@ impl<T> Deck<T> {
         self.removed_pile.as_slice()
     }
 
-    pub fn shuffle_draw(&mut self) { self.draw_pile.as_mut_slice().shuffle(&mut thread_rng()); }
+    pub fn shuffle_draw(&mut self) {
+        self.draw_pile.as_mut_slice().shuffle(&mut thread_rng());
+    }
 
-    pub fn shuffle_discard(&mut self) { self.discard_pile.as_mut_slice().shuffle(&mut thread_rng()); }
+    pub fn shuffle_discard(&mut self) {
+        self.discard_pile.as_mut_slice().shuffle(&mut thread_rng());
+    }
 }
 
 #[cfg(test)]
@@ -134,7 +148,8 @@ mod tests {
             deck.put_bottom(0);
         }
 
-        for _ in 0..10000 { // just try long enough
+        for _ in 0..10000 {
+            // just try long enough
             deck.shuffle_draw();
             if deck.draw_pile.last() == Some(&1) {
                 break;
@@ -142,7 +157,8 @@ mod tests {
         }
         assert_eq!(deck.draw_top(), Some(1));
 
-        for _ in 0..10000 { // again
+        for _ in 0..10000 {
+            // again
             deck.shuffle_draw();
             if deck.draw_pile.last() == Some(&2) {
                 break;
@@ -158,7 +174,8 @@ mod tests {
         deck.discard(1);
         assert_eq!(deck.see_discarded(), [0, 1]);
 
-        for _ in 0..1000 { // just try long enough
+        for _ in 0..1000 {
+            // just try long enough
             deck.shuffle_discard();
             if deck.discard_pile.last() == Some(&0) {
                 break;
@@ -226,7 +243,13 @@ mod tests {
         let mut expected = initial_deck_size;
 
         while !remaining.is_empty() {
-            let size = bucket_standard_size + if carry > 0 { carry -= 1; 1 } else { 0 };
+            let size = bucket_standard_size
+                + if carry > 0 {
+                    carry -= 1;
+                    1
+                } else {
+                    0
+                };
 
             let (bucket, tail) = remaining.split_at(size);
 
