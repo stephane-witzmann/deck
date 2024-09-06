@@ -7,7 +7,7 @@ pub struct Deck<T> {
     removed_pile: Vec<T>
 }
 
-impl<T: Copy> Deck<T> {
+impl<T> Deck<T> {
     pub fn new() -> Self {
         Self {
             draw_pile: Vec::<T>::new(),
@@ -38,17 +38,17 @@ impl<T: Copy> Deck<T> {
 
     pub fn put_bottom(&mut self, x: T) { self.draw_pile.insert(0, x); }
 
-    // TODO make x a vector => remove "buckets" + remove the need for Copy
-    pub fn put_sparse(&mut self, x: T, n_buckets: usize) {
-        if n_buckets == 0 {
+    pub fn put_sparse(&mut self, elements: Vec<T>) {
+        if elements.is_empty() {
             return;
         }
 
+        let n_buckets = elements.len();
         let bucket_standard_size = self.draw_pile.len() / n_buckets;
         let mut carry = self.draw_pile.len() % n_buckets;
 
         let mut start = 0_usize;
-        for _ in 0..n_buckets {
+        for x in elements {
             let size = bucket_standard_size + if carry > 0 { carry -= 1; 1 } else { 0 };
             let index = thread_rng().gen_range(0..=size);
             self.draw_pile.insert(start + index, x);
@@ -203,11 +203,9 @@ mod tests {
 
     fn sub_test_sparse_zero(initial_deck_size: usize) {
         let mut deck = Deck::<usize>::new();
-        for i in 0..initial_deck_size {
-            deck.put_top(i);
-        }
+        (0..initial_deck_size).for_each(|i| deck.put_top(i));
 
-        deck.put_sparse(initial_deck_size, 0);
+        deck.put_sparse(Vec::new());
         assert_eq!(deck.draw_pile.len(), initial_deck_size);
         for i in 0..deck.draw_pile.len() {
             assert_eq!(deck.draw_pile[i], i);
@@ -216,17 +214,16 @@ mod tests {
 
     fn sub_test_sparse(initial_deck_size: usize, n_insert: usize) {
         let mut deck = Deck::<usize>::new();
-        for i in 0..initial_deck_size {
-            deck.put_top(i);
-        }
-        deck.put_sparse(initial_deck_size, n_insert);
+        (0..initial_deck_size).for_each(|i| deck.put_top(i));
 
+        deck.put_sparse((initial_deck_size..initial_deck_size + n_insert).collect());
         assert_eq!(deck.draw_pile.len(), initial_deck_size + n_insert);
 
         let bucket_standard_size = initial_deck_size / n_insert + 1;
         let mut carry = initial_deck_size % n_insert;
         let mut start_counter: usize = 0;
         let mut remaining = deck.draw_pile.as_slice();
+        let mut expected = initial_deck_size;
 
         while !remaining.is_empty() {
             let size = bucket_standard_size + if carry > 0 { carry -= 1; 1 } else { 0 };
@@ -235,15 +232,16 @@ mod tests {
 
             // check bucket
             assert_eq!(bucket.len(), size);
-            assert!(bucket.contains(&initial_deck_size));
+            assert!(bucket.contains(&expected));
 
-            for (i, e) in bucket.iter().filter(|x| **x != initial_deck_size).enumerate() {
+            for (i, e) in bucket.iter().filter(|x| **x != expected).enumerate() {
                 assert_eq!(*e, start_counter + i);
             }
 
             // loop
             remaining = tail;
             start_counter += size - 1;
+            expected += 1;
         }
     }
 }
