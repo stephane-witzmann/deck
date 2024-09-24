@@ -77,7 +77,7 @@ impl<T> Deck<T> {
         self.draw_pile.len()
     }
 
-    pub fn see_draw(&mut self) -> &[T] {
+    pub fn see_draw(&self) -> &[T] {
         self.draw_pile.as_slice()
     }
 
