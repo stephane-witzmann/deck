@@ -1,5 +1,5 @@
 use rand::seq::SliceRandom;
-use rand::{thread_rng, Rng};
+use rand::{rng, Rng};
 
 pub struct Deck<T> {
     draw_pile: Vec<T>,
@@ -58,7 +58,7 @@ impl<T> Deck<T> {
                 } else {
                     0
                 };
-            let index = thread_rng().gen_range(0..=size);
+            let index = rng().random_range(0..=size);
             self.draw_pile.insert(start + index, x);
 
             start += size + 1;
@@ -90,11 +90,11 @@ impl<T> Deck<T> {
     }
 
     pub fn shuffle_draw(&mut self) {
-        self.draw_pile.as_mut_slice().shuffle(&mut thread_rng());
+        self.draw_pile.as_mut_slice().shuffle(&mut rng());
     }
 
     pub fn shuffle_discard(&mut self) {
-        self.discard_pile.as_mut_slice().shuffle(&mut thread_rng());
+        self.discard_pile.as_mut_slice().shuffle(&mut rng());
     }
 }
 
