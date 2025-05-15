@@ -1,5 +1,5 @@
 use rand::seq::SliceRandom;
-use rand::{rng, Rng};
+use rand::{Rng, rng};
 
 pub struct Deck<T> {
     draw_pile: Vec<T>,
@@ -17,7 +17,7 @@ impl<T> Deck<T> {
     }
 
     pub fn can_draw(&self) -> bool {
-        self.draw_pile.len() > 0
+        !self.draw_pile.is_empty()
     }
 
     pub fn draw_top(&mut self) -> Option<T> {
@@ -95,6 +95,12 @@ impl<T> Deck<T> {
 
     pub fn shuffle_discard(&mut self) {
         self.discard_pile.as_mut_slice().shuffle(&mut rng());
+    }
+}
+
+impl<T> Default for Deck<T> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
